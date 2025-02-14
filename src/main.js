@@ -25,12 +25,60 @@ const palettes = [
 // =========================
 const backgroundMusic = new Audio('/assets/background.mp3');
 backgroundMusic.loop = true;
+backgroundMusic.muted = true;
 backgroundMusic.volume = 0.3;
 backgroundMusic.play().then(() => {
-  console.log('Background music is playing...');
+  console.log('Background music is playing muted...');
+  // Sử dụng AudioContext để cố gắng resume và unmute (nếu cần)
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (AudioContext) {
+    const ctx = new AudioContext();
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(() => {
+        backgroundMusic.muted = false;
+        console.log('AudioContext resumed, background music unmuted.');
+      }).catch(err => {
+        console.error('AudioContext resume failed:', err);
+      });
+    } else {
+      setTimeout(() => {
+        backgroundMusic.muted = false;
+        console.log('Background music unmuted after timeout.');
+      }, 10);
+    }
+  } else {
+    setTimeout(() => {
+      backgroundMusic.muted = false;
+      console.log('Background music unmuted after timeout (no AudioContext).');
+    }, 10);
+  }
 }).catch((err) => {
   console.error('Autoplay failed:', err);
 });
+
+// Thêm sự kiện "mousemove" một lần để tự động resume phát nhạc khi có tương tác từ người dùng
+document.addEventListener('mousemove', () => {
+  if (backgroundMusic.paused) {
+    backgroundMusic.muted = false;
+    backgroundMusic.play().then(() => {
+      console.log('Background music resumed on first mousemove.');
+    }).catch((err) => {
+      console.error('Failed to resume background music on interaction:', err);
+    });
+  }
+}, { once: true });
+
+document.addEventListener('pointerdown', () => {
+  if (backgroundMusic.paused) {
+    backgroundMusic.muted = false;
+    backgroundMusic.play().then(() => {
+      console.log('Background music resumed on pointerdown.');
+    }).catch((err) => {
+      console.error('Failed to resume background music on pointerdown:', err);
+    });
+  }
+}, { once: true });
+
 
 // =========================
 // Các âm thanh khác
@@ -59,17 +107,34 @@ function getRandomColor() {
 /* --- Base64 Encode/Decode --- */
 // Mã hóa/giải mã Unicode bằng Base64
 function encodeBase64(str) {
-  return btoa(unescape(encodeURIComponent(str)));
+  if (!str) return "";
+  // Mã hóa chuỗi thành Base64 và sau đó chuyển thành URL-safe
+  const base64 = btoa(
+    encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+      return String.fromCharCode("0x" + p1);
+    })
+  );
+  return encodeURIComponent(base64);
 }
 
 function decodeBase64(str) {
+  if (!str) return "";
   try {
-    return decodeURIComponent(escape(atob(str)));
+    // Giải mã URL trước, sau đó giải mã Base64
+    const base64 = decodeURIComponent(str);
+    const decoded = atob(base64)
+      .split("")
+      .map(function(c) {
+        return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+      })
+      .join("");
+    return decodeURIComponent(decoded);
   } catch (e) {
     console.error("Base64 decode failed:", e);
     return "";
   }
 }
+
 
 /* --- Xử lý URL Parameter --- 
    Nếu URL có parameter "q", giải mã và set câu hỏi từ đó, chuyển sang màn 2.
@@ -227,7 +292,7 @@ function renderScreen1(container) {
     state.question = questionValue;
     const encoded = encodeBase64(questionValue);
     const newURL = `${window.location.origin}${window.location.pathname}?q=${encoded}`;
-    window.history.pushState(null, '', `?q=${encoded}`);
+    // window.history.pushState(null, '', `?q=${encoded}`);
     saveQuestion(questionValue);
     navigator.clipboard.writeText(newURL).then(() => {
       showToast('Link generated and copied to clipboard!');
@@ -328,6 +393,50 @@ function updateSavedQuestionsList(container) {
 
 // ----------------- MÀN 2: Câu hỏi Yes/No -----------------
 function renderScreen2(container) {
+  // Hiển thị thông điệp với nút "Xem ngay" trước khi hiển thị giao diện chính
+  backgroundMusic.muted = true;
+  container.innerHTML = "";
+  
+  const messageContainer = document.createElement('div');
+  messageContainer.style.display = 'flex';
+  messageContainer.style.backgroundColor = '#fff';
+  messageContainer.style.borderRadius = '10px';
+  messageContainer.style.padding = '20px';
+  // thêm chiều cao, kích thước vừa đủ nội dung
+  messageContainer.style.flexDirection = 'column';
+  messageContainer.style.alignItems = 'center';
+  messageContainer.style.justifyContent = 'center';
+  messageContainer.style.gap = '20px';
+  
+  const messageText = document.createElement('p');
+  messageText.textContent = "Một thông điệp được gửi tới bạn";
+  messageText.style.fontSize = '1.2em';
+  messageText.style.textAlign = 'center';
+  
+  const viewNowBtn = document.createElement('button');
+  viewNowBtn.textContent = "Xem ngay";
+  viewNowBtn.style.backgroundColor = '#BD4E73';
+  viewNowBtn.style.color = '#fff';
+  viewNowBtn.style.border = 'none';
+  viewNowBtn.style.padding = '10px 20px';
+  viewNowBtn.style.borderRadius = '5px';
+  viewNowBtn.style.cursor = 'pointer';
+  viewNowBtn.addEventListener('click', () => {
+    // Khi ấn "Xem ngay", đảm bảo nhạc nền được phát
+    backgroundMusic.play().catch(() => {});
+    backgroundMusic.play().catch(() => {});
+    backgroundMusic.play().catch(() => {});
+    backgroundMusic.play().catch(() => {});
+    renderScreen2Main(container);
+  });
+  
+  messageContainer.appendChild(messageText);
+  messageContainer.appendChild(viewNowBtn);
+  container.appendChild(messageContainer);
+}
+
+function renderScreen2Main(container) {
+  container.innerHTML = "";
   const wrapper = document.createElement('div');
   wrapper.className = 'card fade-in';
 
@@ -390,6 +499,7 @@ function renderScreen2(container) {
   wrapper.appendChild(btnContainer);
   container.appendChild(wrapper);
 }
+
 
 // ----------------- MÀN 3: Trái tim đập và I love you -----------------
 function renderScreen3(container) {
