@@ -103,6 +103,10 @@ function getRandomColor() {
   const colors = ['#5E1263', '#C88AC3', '#BD4E73', '#9D152D', '#670100'];
   return colors[getRandomInt(0, colors.length - 1)];
 }
+function getRandomColorBright() {
+  const colors = ['#ffffff', '#ffeef7', '#BD4E73', '#9D152D', '#670100'];
+  return colors[getRandomInt(0, colors.length - 1)];
+}
 
 /* --- Base64 Encode/Decode --- */
 // Mã hóa/giải mã Unicode bằng Base64
@@ -241,7 +245,7 @@ function launchConfetti(x, y) {
     confetti.style.setProperty('--dx', dx);
     confetti.style.setProperty('--dy', dy);
     confetti.style.setProperty('--rot', rot);
-    confetti.style.backgroundColor = getRandomColor();
+    confetti.style.backgroundColor = getRandomColorBright();
     
     document.body.appendChild(confetti);
     confetti.addEventListener('animationend', () => confetti.remove());
@@ -532,7 +536,7 @@ function renderScreen3(container) {
     const x = getRandomInt(0, window.innerWidth);
     const y = getRandomInt(0, window.innerHeight);
     launchConfetti(x, y);
-  }, 1500);
+  }, 100);
 }
 
 // ----------------- Nền: Tạo trái tim bay lên -----------------
@@ -559,7 +563,7 @@ function spawnRandomHeart() {
   const y = window.innerHeight;
   createBgHeart(x, y);
 }
-const patternInterval = window.innerWidth < 768 ? 400 : 800;
+const patternInterval = window.innerWidth < 768 ? 200 : 500;
 setInterval(spawnRandomHeart, patternInterval);
 
 document.addEventListener('mousemove', (e) => {
