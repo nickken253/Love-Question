@@ -1,0 +1,201 @@
+/* --- Tổng thể --- */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  /* Ban đầu dùng gradient từ #5E1263 sang #C88AC3 */
+  background: linear-gradient(135deg, #5E1263, #C88AC3);
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+  transition: background 2s ease;
+}
+
+/* Container cho nền trái tim bay */
+#bg-hearts {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: auto;
+  overflow: hidden;
+  z-index: -1;
+}
+
+/* Container chính */
+#app {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+/* --- Card cho từng màn --- */
+.card {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+  max-width: 90%;
+  width: 400px;
+  text-align: center;
+}
+
+/* Căn giữa các phần tử con trong card */
+.card p,
+.card input,
+.card button {
+  margin: 10px auto;
+  text-align: center;
+  display: block;
+}
+
+/* Hiệu ứng fade in cho card */
+.fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* --- Input và Button --- */
+input[type="text"] {
+  padding: 10px;
+  font-size: 1em;
+  border: 2px solid #C88AC3;
+  border-radius: 10px;
+  outline: none;
+  width: 90%;
+}
+
+button {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-size: 1em;
+  cursor: pointer;
+  transition: transform 0.3s ease, background-color 0.3s ease;
+  color: #fff;
+}
+
+/* Container cho 2 nút Yes, No */
+.btn-container {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+/* Nút Submit dùng màu #9D152D */
+.submit-btn {
+  background-color: #9D152D;
+}
+
+/* Nút Yes dùng màu #BD4E73, nút No màu #670100 */
+.yes-btn {
+  background-color: #BD4E73;
+}
+.no-btn {
+  background-color: #670100;
+}
+
+/* --- Màn 3: Trái tim và chữ I love you --- */
+.screen3 .heart {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  background: #BD4E73;
+  transform: rotate(-45deg);
+  margin: 0 auto 20px auto;
+  cursor: pointer;
+  animation: beat 1s infinite;
+}
+.screen3 .heart::before,
+.screen3 .heart::after {
+  content: "";
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  background: #BD4E73;
+  border-radius: 50%;
+}
+.screen3 .heart::before {
+  top: -25px;
+  left: 0;
+}
+.screen3 .heart::after {
+  left: 25px;
+  top: 0;
+}
+@keyframes beat {
+  0%, 100% { transform: scale(1) rotate(-45deg); }
+  50% { transform: scale(1.2) rotate(-45deg); }
+}
+
+/* --- Nền: Trái tim bay lên --- */
+.bg-heart {
+  position: absolute;
+  transform: rotate(-45deg);
+  animation: floatUp var(--duration, 4s) linear forwards;
+}
+.bg-heart::before,
+.bg-heart::after {
+  content: "";
+  position: absolute;
+  background-color: inherit;
+  border-radius: 50%;
+}
+.bg-heart::before {
+  width: 100%;
+  height: 100%;
+  top: -50%;
+  left: 0;
+}
+.bg-heart::after {
+  width: 100%;
+  height: 100%;
+  left: 50%;
+  top: 0;
+}
+@keyframes floatUp {
+  0% {
+    transform: translateY(0) rotate(-45deg);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-300px) rotate(-45deg);
+    opacity: 0;
+  }
+}
+
+/* --- Confetti (tính năng bất ngờ) --- */
+.confetti {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  opacity: 0.9;
+  transform: translate(-50%, -50%);
+  animation: confettiFall 2s ease-out forwards;
+  z-index: 9999;
+}
+@keyframes confettiFall {
+  to {
+    transform: translate(var(--dx), var(--dy)) rotate(var(--rot));
+    opacity: 0;
+  }
+}
+
+/* --- Responsive --- */
+@media (max-width: 480px) {
+  .card {
+    width: 90%;
+    padding: 20px;
+  }
+  button {
+    font-size: 0.9em;
+    padding: 8px 16px;
+  }
+}
