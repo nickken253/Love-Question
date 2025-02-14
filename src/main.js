@@ -92,6 +92,7 @@ function render() {
   app.innerHTML = ''; // Xoá nội dung cũ
 
   if (state.currentScreen === 'screen1') {
+    
     renderScreen1(app);
   } else if (state.currentScreen === 'screen2') {
     renderScreen2(app);
@@ -99,6 +100,20 @@ function render() {
     renderScreen3(app);
   }
 }
+
+function encodeToBase64(str) {
+  const bytes = new TextEncoder().encode(str);
+  let binary = '';
+  bytes.forEach((b) => binary += String.fromCharCode(b));
+  return btoa(binary);
+}
+
+function decodeFromBase64(base64) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array([...binary].map(char => char.charCodeAt(0)));
+  return new TextDecoder().decode(bytes);
+}
+
 
 // ----------------- MÀN 1: Nhập câu hỏi -----------------
 function renderScreen1(container) {
@@ -116,7 +131,12 @@ function renderScreen1(container) {
   submitBtn.textContent = 'Submit';
   submitBtn.classList.add('submit-btn');
   submitBtn.addEventListener('click', () => {
-    state.question = input.value.trim() || 'Bạn có yêu tôi không?';
+    state.question = input.value.trim();
+    // Mã hóa câu hỏi bằng Base64
+    const encodedQuestion = encodeURIComponent(encodeToBase64(state.question));
+    console.log('Câu hỏi mã hóa:', encodeToBase64(state.question));
+    const newUrl = `${window.location.pathname}?q=${encodedQuestion}`;
+    window.history.pushState({ path: newUrl }, '', newUrl);
     state.currentScreen = 'screen2';
     render();
   });
@@ -278,4 +298,17 @@ document.addEventListener('click', (e) => {
 });
 
 // Khởi chạy render khi DOM được load
-window.addEventListener('DOMContentLoaded', render);
+window.addEventListener('DOMContentLoaded', () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const encodedQuestion = urlParams.get('q');
+  if (encodedQuestion) {
+    try {
+      state.question = decodeFromBase64(decodeURIComponent(encodedQuestion));
+      state.currentScreen = 'screen2';
+    } catch (e) {
+      console.error('Lỗi giải mã câu hỏi:', e);
+    }
+  }
+
+  render();
+});
