@@ -349,6 +349,7 @@ function updateSavedQuestionsList(container) {
     container.appendChild(emptyMsg);
     return;
   }
+  const maxLength = 50; // độ dài tối đa của câu hỏi hiển thị
   qs.forEach((q, index) => {
     const row = document.createElement('div');
     row.style.display = 'flex';
@@ -359,7 +360,8 @@ function updateSavedQuestionsList(container) {
     row.style.borderRadius = '5px';
     
     const textSpan = document.createElement('span');
-    textSpan.textContent = q;
+    // Nếu câu hỏi dài quá, hiển thị một phần và thêm dấu "..."
+    textSpan.textContent = q.length > maxLength ? q.substring(0, maxLength) + '...' : q;
     textSpan.style.flex = '1';
     textSpan.style.marginRight = '10px';
     textSpan.style.textAlign = 'left';
@@ -396,6 +398,7 @@ function updateSavedQuestionsList(container) {
     container.appendChild(row);
   });
 }
+
 
 // ----------------- MÀN 2: Câu hỏi Yes/No -----------------
 function renderScreen2(container) {
