@@ -26,7 +26,6 @@ const palettes = [
 const backgroundMusic = new Audio('/assets/background.mp3');
 backgroundMusic.loop = true;
 backgroundMusic.volume = 0.3;
-// Cố gắng tự động phát (nếu trình duyệt cho phép)
 backgroundMusic.play().then(() => {
   console.log('Background music is playing...');
 }).catch((err) => {
@@ -87,13 +86,40 @@ function checkURLParam() {
 }
 
 // =========================
-// Toast Notification
+// Lưu trữ câu hỏi vào localStorage (Ver3)
+// =========================
+
+const STORAGE_KEY = 'generatedQuestions';
+
+function getSavedQuestions() {
+  return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+}
+
+function saveQuestion(question) {
+  let qs = getSavedQuestions();
+  // Thêm mới vào đầu mảng (mới ở trên)
+  qs.unshift(question);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(qs));
+}
+
+function deleteQuestion(index) {
+  let qs = getSavedQuestions();
+  qs.splice(index, 1);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(qs));
+}
+
+function clearQuestions() {
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+// =========================
+// Toast Notification (hiển thị ở giữa bên trên, chữ căn giữa)
 // =========================
 function showToast(message, duration = 2000) {
   const toast = document.createElement('div');
   toast.textContent = message;
   toast.style.position = 'fixed';
-  toast.style.top = '30%';
+  toast.style.top = '20px';
   toast.style.left = '50%';
   toast.style.transform = 'translateX(-50%)';
   toast.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
@@ -102,7 +128,7 @@ function showToast(message, duration = 2000) {
   toast.style.borderRadius = '5px';
   toast.style.zIndex = '3000';
   toast.style.fontSize = '1em';
-  toast.style.textAlign = 'center'; // Chữ được căn giữa
+  toast.style.textAlign = 'center';
   toast.style.opacity = '0';
   toast.style.transition = 'opacity 0.5s ease';
   document.body.appendChild(toast);
@@ -142,7 +168,6 @@ function launchConfetti(x, y) {
     confetti.style.left = `${x}px`;
     confetti.style.top = `${y}px`;
     
-    // Tăng độ tỏa: khoảng cách lớn hơn
     const dx = (Math.random() - 0.5) * 500 + 'px';
     const dy = Math.random() * 500 + 'px';
     const rot = (Math.random() * 720 - 360) + 'deg';
@@ -158,19 +183,17 @@ function launchConfetti(x, y) {
 
 // Hàm render tổng để chuyển đổi màn hình
 function render() {
-  // Nếu không ở màn 3, dừng auto confetti
   if (state.autoConfettiInterval) {
     clearInterval(state.autoConfettiInterval);
     state.autoConfettiInterval = null;
   }
   
   const app = document.getElementById('app');
-  app.innerHTML = ''; // Xoá nội dung cũ
+  app.innerHTML = '';
 
   if (state.currentScreen === 'screen1') {
     renderScreen1(app);
   } else if (state.currentScreen === 'screen2') {
-    // Khi mở màn 2, đảm bảo nhạc nền đang chạy
     backgroundMusic.play().catch(() => {});
     renderScreen2(app);
   } else if (state.currentScreen === 'screen3') {
@@ -178,10 +201,14 @@ function render() {
   }
 }
 
-// ----------------- MÀN 1: Nhập câu hỏi -----------------
+// ----------------- MÀN 1: Nhập câu hỏi & Danh sách câu hỏi đã lưu -----------------
 function renderScreen1(container) {
   const wrapper = document.createElement('div');
   wrapper.className = 'card fade-in';
+
+  // Phần nhập câu hỏi
+  const inputSection = document.createElement('div');
+  inputSection.style.marginBottom = '20px';
 
   const desc = document.createElement('p');
   desc.textContent = 'Nhập câu hỏi dạng Yes/No questition.';
@@ -190,31 +217,113 @@ function renderScreen1(container) {
   input.type = 'text';
   input.placeholder = 'Ví dụ: Bạn có yêu tôi không?';
 
-  // Nút "Generate" thay vì "Submit"
+  // Nút "Generate" với màu nền #9D152D
   const generateBtn = document.createElement('button');
   generateBtn.textContent = 'Generate';
   generateBtn.classList.add('submit-btn');
+  generateBtn.style.backgroundColor = '#9D152D';
   generateBtn.addEventListener('click', () => {
-    // Lấy giá trị input (nếu trống, dùng mặc định)
     const questionValue = input.value.trim() || 'Bạn có yêu tôi không?';
     state.question = questionValue;
-    // Mã hóa câu hỏi bằng Base64 và cập nhật URL với parameter "q"
     const encoded = encodeBase64(questionValue);
     const newURL = `${window.location.origin}${window.location.pathname}?q=${encoded}`;
-    // window.history.pushState(null, '', `?q=${encoded}`);
-    // Copy link vào clipboard và hiển thị toast
+    window.history.pushState(null, '', `?q=${encoded}`);
+    saveQuestion(questionValue);
     navigator.clipboard.writeText(newURL).then(() => {
-      showToast('Tạo link thành công và đã copy vào clipboard! Gửi cho người ấy thôi!');
+      showToast('Link generated and copied to clipboard!');
     }).catch(() => {
       showToast('Link generated, but failed to copy.');
     });
-    // Không chuyển qua màn 2; người dùng sẽ chia sẻ link
+    updateSavedQuestionsList(listContainer);
+    input.value = '';
   });
 
-  wrapper.appendChild(desc);
-  wrapper.appendChild(input);
-  wrapper.appendChild(generateBtn);
+  inputSection.appendChild(desc);
+  inputSection.appendChild(input);
+  inputSection.appendChild(generateBtn);
+  wrapper.appendChild(inputSection);
+
+  // Phần danh sách câu hỏi đã lưu
+  const listContainer = document.createElement('div');
+  listContainer.style.marginTop = '20px';
+  listContainer.style.display = 'flex';
+  listContainer.style.flexDirection = 'column';
+  listContainer.style.gap = '10px';
+  updateSavedQuestionsList(listContainer);
+  wrapper.appendChild(listContainer);
+
+  // Nút "Clear" để xóa toàn bộ câu hỏi đã lưu, màu nền #5E1263
+  const clearBtn = document.createElement('button');
+  clearBtn.textContent = 'Clear';
+  clearBtn.style.marginTop = '10px';
+  clearBtn.style.backgroundColor = '#5E1263';
+  clearBtn.addEventListener('click', () => {
+    clearQuestions();
+    updateSavedQuestionsList(listContainer);
+    showToast('All questions cleared!');
+  });
+  wrapper.appendChild(clearBtn);
+
   container.appendChild(wrapper);
+}
+
+// Hàm cập nhật danh sách câu hỏi đã lưu
+function updateSavedQuestionsList(container) {
+  container.innerHTML = '';
+  const qs = getSavedQuestions();
+  if (qs.length === 0) {
+    const emptyMsg = document.createElement('p');
+    emptyMsg.textContent = 'Chưa có câu hỏi nào được lưu.';
+    emptyMsg.style.fontStyle = 'italic';
+    container.appendChild(emptyMsg);
+    return;
+  }
+  qs.forEach((q, index) => {
+    const row = document.createElement('div');
+    row.style.display = 'flex';
+    row.style.alignItems = 'center';
+    row.style.justifyContent = 'space-between';
+    row.style.padding = '5px 10px';
+    row.style.border = '1px solid #ccc';
+    row.style.borderRadius = '5px';
+    
+    const textSpan = document.createElement('span');
+    textSpan.textContent = q;
+    textSpan.style.flex = '1';
+    textSpan.style.marginRight = '10px';
+    textSpan.style.textAlign = 'left';
+    
+    // Nút "Copy" với màu nền #C88AC3
+    const copyBtn = document.createElement('button');
+    copyBtn.textContent = 'Copy';
+    copyBtn.style.marginRight = '5px';
+    copyBtn.style.backgroundColor = '#C88AC3';
+    copyBtn.addEventListener('click', () => {
+      const encoded = encodeBase64(q);
+      const link = `${window.location.origin}${window.location.pathname}?q=${encoded}`;
+      navigator.clipboard.writeText(link).then(() => {
+        showToast('Link copied!');
+      }).catch(() => {
+        showToast('Failed to copy link.');
+      });
+    });
+    
+    // Nút "Xóa" với màu nền #9D152D
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = 'Xóa';
+    deleteBtn.style.backgroundColor = '#9D152D';
+    deleteBtn.addEventListener('click', () => {
+      deleteQuestion(index);
+      updateSavedQuestionsList(container);
+      showToast('Question deleted!');
+    });
+    
+    row.appendChild(textSpan);
+    row.appendChild(copyBtn);
+    row.appendChild(deleteBtn);
+    
+    container.appendChild(row);
+  });
 }
 
 // ----------------- MÀN 2: Câu hỏi Yes/No -----------------
@@ -224,6 +333,7 @@ function renderScreen2(container) {
 
   const questionEl = document.createElement('h2');
   questionEl.textContent = state.question;
+  questionEl.style.textAlign = 'center';
   wrapper.appendChild(questionEl);
   
   // Container cho 2 nút Yes và No
@@ -233,12 +343,13 @@ function renderScreen2(container) {
   const yesBtn = document.createElement('button');
   yesBtn.textContent = 'Yes';
   yesBtn.classList.add('yes-btn');
+  yesBtn.style.backgroundColor = '#BD4E73';
 
   const noBtn = document.createElement('button');
   noBtn.textContent = 'No';
   noBtn.classList.add('no-btn');
+  noBtn.style.backgroundColor = '#670100';
 
-  // Hàm updateButtonSizes theo snippet bạn cung cấp
   function updateButtonSizes() {
     if (state.noCount < 5) {
       const scaleYes = 1 + state.noCount * 0.2;
@@ -246,7 +357,6 @@ function renderScreen2(container) {
       yesBtn.style.transform = `scale(${scaleYes})`;
       noBtn.style.transform = `scale(${scaleNo})`;
     } else {
-      // Khi nút Yes full màn: đảm bảo chiếm toàn bộ viewport và chữ luôn căn giữa
       yesBtn.style.position = 'fixed';
       yesBtn.style.top = '0';
       yesBtn.style.width = '100vw';
@@ -265,7 +375,6 @@ function renderScreen2(container) {
     state.currentScreen = 'screen3';
     congratsSound.currentTime = 0;
     congratsSound.play();
-    // backgroundMusic.play().catch(() => {});
     render();
   });
 
@@ -284,15 +393,15 @@ function renderScreen2(container) {
 
 // ----------------- MÀN 3: Trái tim đập và I love you -----------------
 function renderScreen3(container) {
-  // Đặt nền màn 3 với gradient từ #C88AC3 sang #BD4E73
   document.body.style.background = 'linear-gradient(135deg, #C88AC3, #BD4E73)';
   
   const wrapper = document.createElement('div');
   wrapper.className = 'card fade-in screen3';
-
+  // Tăng padding top gấp đôi (ví dụ từ 30px lên 60px)
+  wrapper.style.paddingTop = '60px';
+  
   const heart = document.createElement('div');
   heart.className = 'heart';
-  // Khi click vào trái tim chính, bùng nổ confetti tại vị trí đó
   heart.addEventListener('click', (e) => {
     const rect = heart.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
@@ -307,7 +416,6 @@ function renderScreen3(container) {
   wrapper.appendChild(loveText);
   container.appendChild(wrapper);
   
-  // Bật chế độ confetti tự động, lặp lại mỗi 1.5 giây
   state.autoConfettiInterval = setInterval(() => {
     const x = getRandomInt(0, window.innerWidth);
     const y = getRandomInt(0, window.innerHeight);
@@ -319,12 +427,12 @@ function renderScreen3(container) {
 function createBgHeart(x, y) {
   const heart = document.createElement('div');
   heart.classList.add('bg-heart');
-  const size = Math.random() * 20 + 15; // kích thước từ 15 đến 35px
+  const size = Math.random() * 20 + 15;
   heart.style.width = `${size}px`;
   heart.style.height = `${size * 0.9}px`;
   heart.style.left = `${x - size / 2}px`;
   heart.style.top = `${y - size / 2}px`;
-  const duration = Math.random() * 3 + 3; // thời gian 3-6 giây
+  const duration = Math.random() * 3 + 3;
   heart.style.setProperty('--duration', `${duration}s`);
   const allColors = ['#5E1263', '#C88AC3', '#BD4E73', '#9D152D', '#670100'];
   const color = allColors[getRandomInt(0, allColors.length - 1)];
@@ -339,29 +447,22 @@ function spawnRandomHeart() {
   const y = window.innerHeight;
   createBgHeart(x, y);
 }
-// Nếu màn hình nhỏ (tablet, điện thoại), tăng tần suất spawn pattern
 const patternInterval = window.innerWidth < 768 ? 400 : 800;
 setInterval(spawnRandomHeart, patternInterval);
 
-// Tạo trái tim theo hành động di chuột (chỉ có trên desktop)
 document.addEventListener('mousemove', (e) => {
   if (window.innerWidth >= 768) {
     createBgHeart(e.clientX, e.clientY);
   }
 });
 
-// Global: Lắng nghe click chuột ở bất kỳ đâu để phát tiếng click và thay đổi gradient nếu cần
 document.addEventListener('click', (e) => {
   clickSound.currentTime = 0;
   clickSound.play();
-  backgroundMusic.play().catch(() => {});
   if (!e.target.closest('#app') && state.currentScreen !== 'screen3') {
     changeBackgroundGradient();
   }
 });
 
-// Kiểm tra URL parameter "q" để xác định màn hiển thị ban đầu
 checkURLParam();
-
-// Khởi chạy render khi DOM được load
 window.addEventListener('DOMContentLoaded', render);

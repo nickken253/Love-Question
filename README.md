@@ -5,6 +5,14 @@ Love Question Game là một trò chơi web vui nhộn và tương tác, nơi b�
 
 Trò chơi này mang đến trải nghiệm thú vị, đặc biệt dành cho những dịp lãng mạn như Valentine. Với hiệu ứng động, âm nhạc nền và các hiệu ứng tương tác, nó giúp tạo ra một không gian vui vẻ và bất ngờ cho người tham gia.
 
+### Cập nhật version 2
+
+Phiên bản 2 của Love Question Game bổ sung tính năng tạo link chia sẻ: sau khi nhập câu hỏi và nhấn nút "Generate", câu hỏi sẽ được mã hóa Base64 và cập nhật vào URL dưới dạng tham số, đồng thời link này tự động được sao chép vào clipboard và thông báo qua toast ở giữa phía trên màn hình.
+
+### Cập nhật version 3
+- Danh sách câu hỏi đã lưu hiển thị nội dung câu hỏi được căn trái để dễ đọc, trong khi các phần nhập câu hỏi, toast thông báo và các nút điều khiển vẫn được căn giữa.
+
+
 ## Tính năng chính
 ✅ Nhập câu hỏi Yes/No tùy chỉnh  
 ✅ Nút "No" nhỏ dần, nút "Yes" lớn dần  
