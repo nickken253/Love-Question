@@ -1,3 +1,7 @@
+// =========================
+// Cấu hình chung
+// =========================
+
 // Quản lý trạng thái ứng dụng
 const state = {
   currentScreen: 'screen1', // 'screen1', 'screen2', 'screen3'
@@ -16,36 +20,108 @@ const palettes = [
   ['#670100', '#5E1263']
 ];
 
-/* 
-   Thiết lập background music để chạy tự động toàn cục.
-   Vì trình duyệt thường chặn auto-play không muted, ta sẽ set muted ban đầu rồi unmute sau 500ms.
-*/
+// =========================
+// Nhạc nền (Background Music)
+// =========================
 const backgroundMusic = new Audio('/assets/background.mp3');
 backgroundMusic.loop = true;
-backgroundMusic.volume = 0.8;
-backgroundMusic.muted = true;
+backgroundMusic.volume = 0.3;
+// Cố gắng tự động phát (nếu trình duyệt cho phép)
 backgroundMusic.play().then(() => {
-  setTimeout(() => { backgroundMusic.muted = false; }, 100);
-}).catch(() => {});
+  console.log('Background music is playing...');
+}).catch((err) => {
+  console.error('Autoplay failed:', err);
+});
 
+// =========================
+// Các âm thanh khác
+// =========================
 const clickSound = new Audio('/assets/click.mp3');
 clickSound.volume = 0.5;
 
 const congratsSound = new Audio('/assets/congrats.mp3');
 congratsSound.volume = 0.7;
 
-// Hàm tiện ích: trả về số nguyên ngẫu nhiên trong khoảng [min, max]
+// =========================
+// Hàm tiện ích
+// =========================
+
+// Trả về số nguyên ngẫu nhiên trong khoảng [min, max]
 function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-// Hàm tiện ích: trả về 1 màu ngẫu nhiên từ bộ màu cố định
+// Trả về 1 màu ngẫu nhiên từ bộ màu cố định
 function getRandomColor() {
   const colors = ['#5E1263', '#C88AC3', '#BD4E73', '#9D152D', '#670100'];
   return colors[getRandomInt(0, colors.length - 1)];
 }
 
-// Hàm thay đổi gradient nền một cách từ từ khi click vào nền (nếu click ngoài #app và không ở màn 3)
+/* --- Base64 Encode/Decode --- */
+// Mã hóa/giải mã Unicode bằng Base64
+function encodeBase64(str) {
+  return btoa(unescape(encodeURIComponent(str)));
+}
+
+function decodeBase64(str) {
+  try {
+    return decodeURIComponent(escape(atob(str)));
+  } catch (e) {
+    console.error("Base64 decode failed:", e);
+    return "";
+  }
+}
+
+/* --- Xử lý URL Parameter --- 
+   Nếu URL có parameter "q", giải mã và set câu hỏi từ đó, chuyển sang màn 2.
+*/
+function checkURLParam() {
+  const params = new URLSearchParams(window.location.search);
+  const qParam = params.get('q');
+  if (qParam && qParam.trim() !== "") {
+    state.question = decodeBase64(qParam);
+    state.currentScreen = 'screen2';
+  } else {
+    state.currentScreen = 'screen1';
+  }
+}
+
+// =========================
+// Toast Notification
+// =========================
+function showToast(message, duration = 2000) {
+  const toast = document.createElement('div');
+  toast.textContent = message;
+  toast.style.position = 'fixed';
+  toast.style.top = '30%';
+  toast.style.left = '50%';
+  toast.style.transform = 'translateX(-50%)';
+  toast.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+  toast.style.color = '#fff';
+  toast.style.padding = '10px 20px';
+  toast.style.borderRadius = '5px';
+  toast.style.zIndex = '3000';
+  toast.style.fontSize = '1em';
+  toast.style.textAlign = 'center'; // Chữ được căn giữa
+  toast.style.opacity = '0';
+  toast.style.transition = 'opacity 0.5s ease';
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '1';
+  }, 100);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    setTimeout(() => {
+      toast.remove();
+    }, 500);
+  }, duration);
+}
+
+// =========================
+// Các hiệu ứng & UI
+// =========================
+
+// Thay đổi gradient nền khi click ngoài #app (và không ở màn 3)
 function changeBackgroundGradient() {
   let newIndex;
   do {
@@ -57,7 +133,7 @@ function changeBackgroundGradient() {
   document.body.style.background = `linear-gradient(135deg, ${color1}, ${color2})`;
 }
 
-// Tính năng bất ngờ: hiệu ứng confetti với độ tỏa lớn và z-index cao
+// Hiệu ứng confetti
 function launchConfetti(x, y) {
   const confettiCount = 30;
   for (let i = 0; i < confettiCount; i++) {
@@ -94,6 +170,8 @@ function render() {
   if (state.currentScreen === 'screen1') {
     renderScreen1(app);
   } else if (state.currentScreen === 'screen2') {
+    // Khi mở màn 2, đảm bảo nhạc nền đang chạy
+    backgroundMusic.play().catch(() => {});
     renderScreen2(app);
   } else if (state.currentScreen === 'screen3') {
     renderScreen3(app);
@@ -112,18 +190,30 @@ function renderScreen1(container) {
   input.type = 'text';
   input.placeholder = 'Ví dụ: Bạn có yêu tôi không?';
 
-  const submitBtn = document.createElement('button');
-  submitBtn.textContent = 'Submit';
-  submitBtn.classList.add('submit-btn');
-  submitBtn.addEventListener('click', () => {
-    state.question = input.value.trim() || 'Bạn có yêu tôi không?';
-    state.currentScreen = 'screen2';
-    render();
+  // Nút "Generate" thay vì "Submit"
+  const generateBtn = document.createElement('button');
+  generateBtn.textContent = 'Generate';
+  generateBtn.classList.add('submit-btn');
+  generateBtn.addEventListener('click', () => {
+    // Lấy giá trị input (nếu trống, dùng mặc định)
+    const questionValue = input.value.trim() || 'Bạn có yêu tôi không?';
+    state.question = questionValue;
+    // Mã hóa câu hỏi bằng Base64 và cập nhật URL với parameter "q"
+    const encoded = encodeBase64(questionValue);
+    const newURL = `${window.location.origin}${window.location.pathname}?q=${encoded}`;
+    // window.history.pushState(null, '', `?q=${encoded}`);
+    // Copy link vào clipboard và hiển thị toast
+    navigator.clipboard.writeText(newURL).then(() => {
+      showToast('Tạo link thành công và đã copy vào clipboard! Gửi cho người ấy thôi!');
+    }).catch(() => {
+      showToast('Link generated, but failed to copy.');
+    });
+    // Không chuyển qua màn 2; người dùng sẽ chia sẻ link
   });
 
   wrapper.appendChild(desc);
   wrapper.appendChild(input);
-  wrapper.appendChild(submitBtn);
+  wrapper.appendChild(generateBtn);
   container.appendChild(wrapper);
 }
 
@@ -148,6 +238,7 @@ function renderScreen2(container) {
   noBtn.textContent = 'No';
   noBtn.classList.add('no-btn');
 
+  // Hàm updateButtonSizes theo snippet bạn cung cấp
   function updateButtonSizes() {
     if (state.noCount < 5) {
       const scaleYes = 1 + state.noCount * 0.2;
@@ -158,15 +249,12 @@ function renderScreen2(container) {
       // Khi nút Yes full màn: đảm bảo chiếm toàn bộ viewport và chữ luôn căn giữa
       yesBtn.style.position = 'fixed';
       yesBtn.style.top = '0';
-      // yesBtn.style.left = '0';
       yesBtn.style.width = '100vw';
-      // yesBtn.style.height = '100vh';
       yesBtn.style.fontSize = '4em';
       yesBtn.style.zIndex = '1000';
       yesBtn.style.display = 'flex';
       yesBtn.style.alignItems = 'center';
       yesBtn.style.justifyContent = 'center';
-      // Đảm bảo không có margin hay padding làm lệch
       yesBtn.style.boxSizing = 'border-box';
       yesBtn.textContent = 'Yes';
       noBtn.style.display = 'none';
@@ -177,6 +265,7 @@ function renderScreen2(container) {
     state.currentScreen = 'screen3';
     congratsSound.currentTime = 0;
     congratsSound.play();
+    // backgroundMusic.play().catch(() => {});
     render();
   });
 
@@ -203,7 +292,7 @@ function renderScreen3(container) {
 
   const heart = document.createElement('div');
   heart.className = 'heart';
-  // Click vào trái tim chính cũng bùng nổ confetti tại vị trí đó
+  // Khi click vào trái tim chính, bùng nổ confetti tại vị trí đó
   heart.addEventListener('click', (e) => {
     const rect = heart.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
@@ -227,20 +316,16 @@ function renderScreen3(container) {
 }
 
 // ----------------- Nền: Tạo trái tim bay lên -----------------
-
-// Hàm tạo trái tim nền tại vị trí (x, y)
 function createBgHeart(x, y) {
   const heart = document.createElement('div');
   heart.classList.add('bg-heart');
-  // Kích thước từ 15 đến 35px
-  const size = Math.random() * 20 + 15;
+  const size = Math.random() * 20 + 15; // kích thước từ 15 đến 35px
   heart.style.width = `${size}px`;
   heart.style.height = `${size * 0.9}px`;
   heart.style.left = `${x - size / 2}px`;
   heart.style.top = `${y - size / 2}px`;
   const duration = Math.random() * 3 + 3; // thời gian 3-6 giây
   heart.style.setProperty('--duration', `${duration}s`);
-  // Chọn màu ngẫu nhiên từ bộ màu cố định
   const allColors = ['#5E1263', '#C88AC3', '#BD4E73', '#9D152D', '#670100'];
   const color = allColors[getRandomInt(0, allColors.length - 1)];
   heart.style.backgroundColor = color;
@@ -249,7 +334,6 @@ function createBgHeart(x, y) {
   heart.addEventListener('animationend', () => heart.remove());
 }
 
-// Tạo trái tim nền ngẫu nhiên từ dưới lên
 function spawnRandomHeart() {
   const x = Math.random() * window.innerWidth;
   const y = window.innerHeight;
@@ -270,12 +354,14 @@ document.addEventListener('mousemove', (e) => {
 document.addEventListener('click', (e) => {
   clickSound.currentTime = 0;
   clickSound.play();
-  
-  // Nếu click ngoài vùng #app và không ở màn 3, thay đổi gradient nền
+  backgroundMusic.play().catch(() => {});
   if (!e.target.closest('#app') && state.currentScreen !== 'screen3') {
     changeBackgroundGradient();
   }
 });
+
+// Kiểm tra URL parameter "q" để xác định màn hiển thị ban đầu
+checkURLParam();
 
 // Khởi chạy render khi DOM được load
 window.addEventListener('DOMContentLoaded', render);
