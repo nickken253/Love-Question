@@ -215,6 +215,7 @@ function showToast(message, duration = 2000) {
 // Thay đổi gradient nền khi click ngoài #app (và không ở màn 3)
 function changeBackgroundGradient() {
   let newIndex;
+  console.log('Current palette index:', state.currentPaletteIndex);
   do {
     newIndex = getRandomInt(0, palettes.length - 1);
   } while(newIndex === state.currentPaletteIndex);
@@ -222,6 +223,7 @@ function changeBackgroundGradient() {
   state.currentPaletteIndex = newIndex;
   const [color1, color2] = palettes[newIndex];
   document.body.style.background = `linear-gradient(135deg, ${color1}, ${color2})`;
+  console.log('Background gradient changed:', color1, color2);
 }
 
 // Hiệu ứng confetti
@@ -572,7 +574,15 @@ document.addEventListener('click', (e) => {
   if (!e.target.closest('#app') && state.currentScreen !== 'screen3') {
     changeBackgroundGradient();
   }
+  if (state.currentScreen === 'screen3') {
+    // Khi ở màn 3, bất kỳ click nào cũng kích hoạt confetti tại vị trí click
+    launchConfetti(e.clientX, e.clientY);
+  } else if (!e.target.closest('#app')) {
+    changeBackgroundGradient();
+  }
 });
+
+
 
 checkURLParam();
 window.addEventListener('DOMContentLoaded', render);
